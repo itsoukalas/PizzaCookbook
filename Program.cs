@@ -1,88 +1,147 @@
 ﻿
-using System.Threading.Channels;
-
-var pizzaRecipesApp = new PizzaRecipesApp();
-pizzaRecipesApp.Run();
+using Pizza_Cookbook.Recipes;
+using Pizza_Cookbook.Recipes.Ingredients;
 
 
+var pizzaRecipesApp = new PizzaRecipesApp(
+    new RecipesRepository(),
+    new RecipesConsoleUserInteraction(
+        new IngredientsRegister()
+        ));
+
+pizzaRecipesApp.Run("test");
 
 
 
-Pizza piza = new Pizza();
-piza.AddIngredients(new Cheddar());
-piza.AddIngredients(new Mozzarella());
-piza.AddIngredients(new TomatosSauce());
-piza.Describe();
-
-//var ingredients = new List<Ingredient> {
-//        new Cheddar(),
-//        new Mozzarella(),
-//    new TomatosSauce()
-//    };
-
-//foreach (Ingredient ingredient in ingredients)
-//{
-//    Console.WriteLine(ingredient.Name);
-//}
 Console.ReadKey();
 
-
-public class Pizza
+public class PizzaRecipesApp
 {
-    private List<Ingredient> _ingredients = new List<Ingredient>();
+    private readonly IRecipesRepository _recipesRepository;
+    private readonly IRecipeUserInteraction _recipesUserInteraction;
 
-    public void AddIngredients(Ingredient ingredient) =>
-        _ingredients.Add(ingredient);
-
-    public void Describe()
+    public PizzaRecipesApp(IRecipesRepository recipesRepository, IRecipeUserInteraction recipesConsoleUserInteraction)
     {
-        Console.WriteLine($"This is a pizza with {string.Join(",", _ingredients)}");
+        _recipesRepository = recipesRepository;
+        _recipesUserInteraction = recipesConsoleUserInteraction;
     }
 
-}
-
-public abstract class Ingredient
-{
-    public virtual string Name { get; } = "Some Ingredient";
-    public override string ToString() => Name;
-    public abstract void Prepare();
-}
-
-
-public abstract class Cheese : Ingredient
-{
-
-}
-
-
-public class Cheddar : Cheese
-{
-    public override string Name => $"{base.Name} Cheddar cheese";
-
-    public int AgedForMonths { get; }
-
-    public override void Prepare()
+    public void Run(string filePath)
     {
-        throw new NotImplementedException();
+        var allRecipes = _recipesRepository.Read(filePath);
+        _recipesUserInteraction.PrintExistingRecipes(allRecipes);
+        _recipesUserInteraction.PromptToCreateRecipe();
+        //var ingredients = _recipesUserInteraction.ReadIngredientsFromUser();
+
+        //if (ingredients.Count > 0)
+        //{
+        //    var recipe = new Recipe(ingredients);
+        //    allRecipes.add(recipe);
+        //    _recipesRepository.Write(filePath, allRecipes);
+        //    _recipesUserInteraction.ShowMessage(recipe.ToString());
+        //}
+        //else
+        //{
+        //    _recipesUserInteraction.ShowMessage(
+        //        "No ingredient have been selected" +
+        //        "Recipe will not be saved");
+        //}
+        _recipesUserInteraction.Exit();
     }
 }
 
-public class TomatosSauce : Ingredient
+public interface IRecipesRepository
 {
-    public override string Name => "Tomato sauce";
-    public int TomatosIn1000Grams { get; }
+    List<Recipe> Read(string filePath);
+}
 
-    public override void Prepare()
+public interface IRecipeUserInteraction
+{
+    void ShowMessage(string message);
+    void Exit();
+    void PrintExistingRecipes(IEnumerable<Recipe> allRecipes);
+    void PromptToCreateRecipe();
+}
+
+public class RecipesConsoleUserInteraction : IRecipeUserInteraction
+{
+    private readonly IngredientsRegister _ingredientRegister;
+
+    public RecipesConsoleUserInteraction(IngredientsRegister ingredientsRegister)
     {
-        throw new NotImplementedException();
+        _ingredientRegister = ingredientsRegister;
+    }
+
+    public void Exit()
+    {
+        Console.WriteLine("Press any key to close");
+        Console.ReadKey();
+    }
+
+    public void PrintExistingRecipes(IEnumerable<Recipe> allRecipes)
+    {
+        if (allRecipes.Count() > 0)
+        {
+            Console.WriteLine("Existring recipes are: " + Environment.NewLine);
+            int recipeIndex = 1;
+            foreach (var recipe in allRecipes)
+            {
+                Console.WriteLine($"***** {recipeIndex}*****");
+                Console.WriteLine(recipe);
+                Console.WriteLine();
+                recipeIndex++;
+            }
+        }
+    }
+
+    public void PromptToCreateRecipe()
+    {
+        Console.WriteLine("Create a new pizza recipe!" +
+            "Available ingredients are: ");
+        foreach (var ingredient in _ingredientRegister.All)
+        {
+            Console.WriteLine(ingredient);
+        }
+    }
+
+    public void ShowMessage(string v)
+    {
+        Console.WriteLine(v);
     }
 }
 
-public class Mozzarella : Ingredient
+public class IngredientsRegister
 {
-    public override string Name => "Mozzarella";
-    public bool IsLight { get; }
-
-    public override void Prepare() =>
-    Console.WriteLine($"Slice thinkly and place on top of the pizza.");
+    public IEnumerable<Ingredient> All { get; } = new List<Ingredient>
+    {
+    new Cheddar(),
+    new Mozzarella(),
+    new TomatosSauce(),
+    };
 }
+
+public class RecipesRepository : IRecipesRepository
+{
+    public List<Recipe> Read(string filePath)
+    {
+        return new List<Recipe> {
+        new Recipe(new List<Ingredient>
+        {
+            new Cheddar(),
+            new TomatosSauce()
+        }),
+        new Recipe(new List<Ingredient>
+        {
+            new Cheddar(),
+            new Mozzarella()
+        })
+        };
+
+    }
+}
+
+
+
+
+
+
