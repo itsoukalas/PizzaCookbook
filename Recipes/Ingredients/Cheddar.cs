@@ -8,7 +8,7 @@
 
         public override int Id { get; } = 1;
         public override string PreparationInstuctions =>
-            "Cheddar";
+            $"Cheddar {base.PreparationInstuctions}";
 
 
     }
